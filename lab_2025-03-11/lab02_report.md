@@ -143,4 +143,15 @@ CREATE TABLE UserAccess (
     PRIMARY KEY (user_id, calendar_id)
 );
 
+CREATE TABLE Calendar_Event (
+    calendar_id INTEGER REFERENCES Calendars(id),
+    event_id INTEGER REFERENCES Events(id),
+    PRIMARY KEY (calendar_id, event_id)
+);
+
+## Выводы
+
+В результате выполненной работы созданы таблицы Users, Calendars, Events, UserAccess и Calendar_Event.
+Таблицы Users, Calendars, Events реализуют стержневые сущности, а таблицы UserAccess и Calendar_Event - ассоциативные.
+Таблицы заполнены тестовыми данными.
 
