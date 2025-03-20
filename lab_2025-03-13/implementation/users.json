@@ -1,0 +1,74 @@
+[
+    {
+        "name": "Иванов Сергей Петрович",
+        "email": "ivanov_sergey@example.com",
+        "password_hash": "a3dcb4d229de6fde0db5686dee47145d",
+        "registration_date": "2024-02-15T10:20:30"
+    },
+    {
+        "name": "Петрова Мария Александровна",
+        "email": "maria.petrovna@example.org",
+        "password_hash": "5f4dcc3b5aa765d61d8327deb882cf99",
+        "registration_date": "2024-05-22T14:45:00"
+    },
+    {
+        "name": "Сидоров Алексей Викторович",
+        "email": "sidorov.alex@example.net",
+        "password_hash": "098f6bcd4621d373cade4e832627b4f6",
+        "registration_date": "2024-11-03T08:15:45"
+    },
+    {
+        "name": "Кузнецова Ольга Дмитриевна",
+        "email": "olga.kuznetsova@example.com",
+        "password_hash": "e99a18c428cb38d5f260853678922e03",
+        "registration_date": "2025-01-10T12:00:00"
+    },
+    {
+        "name": "Николаев Дмитрий Сергеевич",
+        "email": "dmitriy.nikolaev@example.org",
+        "password_hash": "d41d8cd98f00b204e9800998ecf8427e",
+        "registration_date": "2024-09-25T16:30:15"
+    },
+        {
+        "name": "Васильев Антон Игоревич",
+        "email": "anton.vasilev@example.com",
+        "password_hash": "c4ca4238a0b923820dcc509a6f75849b",
+        "registration_date": "2024-03-12T09:45:30"
+    },
+    {
+        "name": "Морозова Елена Павловна",
+        "email": "elena.morozova@example.net",
+        "password_hash": "827ccb0eea8a706c4c34a16891f84e7b",
+        "registration_date": "2024-06-18T11:20:00"
+    },
+    {
+        "name": "Ковалёв Виктор Андреевич",
+        "email": "victor.kovalev@example.org",
+        "password_hash": "8f14e45fceea167a5a36dedd4bea2543",
+        "registration_date": "2024-08-29T13:55:45"
+    },
+    {
+        "name": "Григорьева Наталья Юрьевна",
+        "email": "natalya.grigorieva@example.com",
+        "password_hash": "45c48cce2e2d7fbdea1afc51c7c6ad26",
+        "registration_date": "2024-10-05T15:10:20"
+    },
+    {
+        "name": "Фёдоров Михаил Олегович",
+        "email": "mikhail.fedorov@example.net",
+        "password_hash": "6f4922f45568161a8cdf4ad2299f6d23",
+        "registration_date": "2025-02-14T17:25:35"
+    },
+    {
+        "name": "Зайцева Анастасия Владимировна",
+        "email": "anastasia.zaytseva@example.org",
+        "password_hash": "70efdf2ec9b086079795c442636b55fb",
+        "registration_date": "2024-12-20T19:40:50"
+    },
+    {
+        "name": "Смирнов Алексей Николаевич",
+        "email": "alexey.smirnov@example.com",
+        "password_hash": "1f0e3dad99908345f7439f8ffabdffc4",
+        "registration_date": "2025-02-28T21:55:10"
+    }
+]
