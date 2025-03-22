@@ -57,4 +57,26 @@
 - access_level: SMALLINT CHECK (access_level BETWEEN 0 AND 3)
 - PRIMARY KEY (user_id, calendar_id)
 
+## Анализ функциональной зависимости
+
+### Таблица "Пользователи"
+- **Функциональные зависимости**:
+  - `id` → `name`, `email`, `password_hash`, `registration_date`
+  - `email` → `id`, `name`, `password_hash`, `registration_date` (поскольку `email` уникален, он также может служить ключом)
+- **Ключи**:
+  - Первичный ключ: `id`
+  - Кандидат на ключ: `email`
+
+### Таблица "Календари"
+- **Функциональные зависимости**:
+  - `id` → `title`, `description`, `created_at`
+- **Ключи**:
+  - Первичный ключ: `id`
+
+### Таблица "События"
+- **Функциональные зависимости**:
+  - `id` → `title`, `event_date`, `event_time`, `duration`, `recurrence`, `location`
+- **Ключи**:
+  - Первичный ключ: `id`
+
 
