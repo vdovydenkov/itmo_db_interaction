@@ -35,7 +35,7 @@
 - идентификатор: первичный ключ, уникальный, обязательный;
 - имя: текстовый, обязательный;
 - email: верифицированный, используется для авторизации, бобязательный;
-- пароль: 32 символов, хеш пароля, обязательный;
+- пароль: байтовый массив, хеш пароля, обязательный;
 - дата регистрации: дата и время, обязательный.
 
 ### Календари (стержневая)
@@ -140,7 +140,7 @@ Users
 - id: SERIAL PRIMARY KEY
 - name: VARCHAR(100) NOT NULL
 - email: VARCHAR(255) UNIQUE NOT NULL
-- password_hash: CHAR(32) NOT NULL
+- password_hash: BYTEA NOT NULL
 - registration_date: TIMESTAMP NOT NULL
 
 Calendars
@@ -182,7 +182,7 @@ entity "Users" {
   --
   name: VARCHAR(100) NOT NULL
   email: VARCHAR(255) UNIQUE NOT NULL
-  password_hash: CHAR(32) NOT NULL
+  password_hash: BYTEA NOT NULL
   registration_date: TIMESTAMP NOT NULL
 }
 
@@ -233,7 +233,7 @@ CREATE TABLE users (
     id SERIAL PRIMARY KEY,
     name VARCHAR(100) NOT NULL,
     email VARCHAR(255) UNIQUE NOT NULL,
-    password_hash CHAR(32) NOT NULL,
+    password_hash BYTEA NOT NULL,
     registration_date TIMESTAMP NOT NULL
 );
 
