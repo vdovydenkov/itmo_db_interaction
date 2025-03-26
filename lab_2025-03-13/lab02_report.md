@@ -26,7 +26,8 @@
 **Пользователь**: информация о пользователе, включая авторизационные данные.
 **Календарь**: название и описание.
 **Событие**: название события, дата и время проведения, локация, сведения о продолжительности и периодичности.
-**Доступ**: связывает пользователя с календарем, одновременно устанавливая права доступа пользователя к календарю.
+**Доступ**: устанавливает связь "многие ко многим" между пользователем и календарем, одновременно устанавливая права доступа пользователя к календарю.
+**Календарь_Событие**: устанавливает связь "один ко многим" между календарем и событиями.
 
 ### Пользователи (стержневая)
 
@@ -63,6 +64,12 @@
 - идентификатор календаря: внешний ключ идентификатор календаря;
 - доступ: числовой (от 0 до 3), обязательный.
 
+### Календарь_Событие (ассоциативная)
+
+**Атрибуты**:
+- идентификатор календаря: внешний ключ идентификатор календаря;
+- идентификатор события: внешний ключ идентификатор события.
+
 ## Связи
 
 ### Пользователь -> Календарь
@@ -75,9 +82,60 @@
 
 Календарю может принадлежать любое количество событий. Событие может принадлежать одному единственному календарю.
 
+### PlantUML-схема инфологической модели
+
+@startuml
+
+entity "Пользователь" as User {
+  + идентификатор: PK
+  --
+  имя
+  email
+  пароль
+  дата регистрации
+}
+
+entity "Календарь" as Calendar {
+  + идентификатор: PK
+  --
+  название
+  описание
+  дата создания
+}
+
+entity "Событие" as Event {
+  + идентификатор: PK
+  --
+  название
+  дата
+  время
+  продолжительность
+  периодичность
+  локация
+}
+
+entity "Доступ" as Access {
+  + идентификатор пользователя: FK
+  + идентификатор календаря: FK
+  --
+  доступ
+}
+
+entity "Календарь_Событие" as CalendarEvent {
+  + идентификатор календаря: FK
+  + идентификатор события: FK
+}
+
+User ||--o{ Access : "1"
+Calendar ||--o{ Access : "1..*"
+Calendar ||--o{ CalendarEvent : "1"
+Event ||--o{ CalendarEvent : "1..*"
+
+@enduml
+
 ## Даталогическая модель
 
-Пользователи
+Users
 ---------------------
 - id: SERIAL PRIMARY KEY
 - name: VARCHAR(100) NOT NULL
@@ -85,14 +143,14 @@
 - password_hash: CHAR(32) NOT NULL
 - registration_date: TIMESTAMP NOT NULL
 
-Календари
+Calendars
 ---------------------
 - id: SERIAL PRIMARY KEY
 - title: VARCHAR(100) NOT NULL
 - description: TEXT
 - created_at: TIMESTAMP NOT NULL
 
-События
+Events
 ---------------------
 - id: SERIAL PRIMARY KEY
 - title: VARCHAR(100) NOT NULL
@@ -102,14 +160,74 @@
 - recurrence: INTEGER
 - location: VARCHAR(255)
 
-Доступ
+UserAccess
 ---------------------
-- user_id: INTEGER REFERENCES Пользователи(id)
-- calendar_id: INTEGER REFERENCES Календари(id)
+- user_id: INTEGER REFERENCES Users(id)
+- calendar_id: INTEGER REFERENCES Calendars(id)
 - access_level: SMALLINT CHECK (access_level BETWEEN 0 AND 3)
 - PRIMARY KEY (user_id, calendar_id)
 
-## реализация даталогической модели на SQL
+Calendar_event
+---------------------
+- calendar_id: INTEGER REFERENCES Calendars(id)
+- event_id: INTEGER REFERENCES Events(id),
+- PRIMARY KEY (calendar_id, event_id)
+
+### PlantUML-схема даталогической модели
+
+@startuml
+
+entity "Users" {
+  + id: SERIAL PRIMARY KEY
+  --
+  name: VARCHAR(100) NOT NULL
+  email: VARCHAR(255) UNIQUE NOT NULL
+  password_hash: CHAR(32) NOT NULL
+  registration_date: TIMESTAMP NOT NULL
+}
+
+entity "Calendars" {
+  + id: SERIAL PRIMARY KEY
+  --
+  title: VARCHAR(100) NOT NULL
+  description: TEXT
+  created_at: TIMESTAMP NOT NULL
+}
+
+entity "Events" {
+  + id: SERIAL PRIMARY KEY
+  --
+  title: VARCHAR(100) NOT NULL
+  event_date: DATE NOT NULL
+  event_time: TIME
+  duration: INTERVAL
+  recurrence: INTEGER
+  location: VARCHAR(255)
+}
+
+entity "UserAccess" {
+  + user_id: INTEGER
+  + calendar_id: INTEGER
+  --
+  access_level: SMALLINT CHECK (access_level BETWEEN 0 AND 3)
+  PRIMARY KEY (user_id, calendar_id)
+}
+
+entity "Calendar_Event" {
+  + calendar_id: INTEGER
+  + event_id: INTEGER
+  --
+  PRIMARY KEY (calendar_id, event_id)
+}
+
+Users ||--o{ UserAccess : "1"
+Calendars ||--o{ UserAccess : "1..*"
+Calendars ||--o{ Calendar_Event : "1"
+Events ||--o{ Calendar_Event : "1..*"
+
+@enduml
+
+## Реализация даталогической модели на SQL
 
 CREATE TABLE users (
     id SERIAL PRIMARY KEY,
