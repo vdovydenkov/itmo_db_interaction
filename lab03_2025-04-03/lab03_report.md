@@ -99,4 +99,39 @@ Events ||--o{ Calendar_Event : "1..*"
 - **Ключи**:
   - Первичный ключ: `id`
 
+## Примеры SQL-запросов для заполнения данными
+
+**Добавление пользователя**
+
+INSERT INTO users (name, email, password_hash, registration_date)
+    VALUES ('Дормидонт Валерьевич', 'dormik@fakemail.zoo', hashed_password, NOW());
+
+**Добавление календаря**
+
+WITH new_calendar AS (
+    INSERT INTO Calendars (title, description, created_at)
+    VALUES ('Досуг', 'События для отдохновения души!', NOW())
+    RETURNING id
+)
+
+INSERT INTO UserAccess (user_id, calendar_id, access_level)
+VALUES (
+    (SELECT id FROM Users WHERE name = 'Дормидонт Валерьевич'),
+    (SELECT id FROM new_calendar),
+    0
+);
+
+**Добавление события**
+
+WITH new_event AS (
+    INSERT INTO Events (title, event_date, event_time, duration, location)
+    VALUES ('Концерт', '2025-03-28', '19:00:00', '2 hours 30 minutes', 'Концертный зал Мариинского театра.')
+    RETURNING id
+)
+
+INSERT INTO Calendar_Event (calendar_id, event_id)
+VALUES (
+    (SELECT id FROM Calendars WHERE title = 'Досуг'),
+    (SELECT id FROM new_event)
+);
 
