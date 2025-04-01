@@ -99,7 +99,7 @@ Events ||--o{ Calendar_Event : "1..*"
 - **Ключи**:
   - Первичный ключ: `id`
 
-## Примеры SQL-запросов для заполнения данными
+## Примеры SQL-запросов на заполнения данными
 
 **Добавление пользователя**
 
@@ -134,4 +134,35 @@ VALUES (
     (SELECT id FROM Calendars WHERE title = 'Досуг'),
     (SELECT id FROM new_event)
 );
+
+## Примеры SQL-запросов на объединение таблиц
+
+**Объединяем пользователей с пренадлежащими им календарями и с уровнем доступа.**
+
+SELECT Users.name, Calendars.title, UserAccess.access_level
+FROM Users
+INNER JOIN UserAccess ON UserAccess.user_id = Users.id
+INNER JOIN Calendars ON UserAccess.calendar_id = Calendars.id;
+
+**Показать пользователей и календари, включая пользователей, у которых нет календарей.**
+
+SELECT Users.name, Calendars.title, UserAccess.access_level 
+FROM Users 
+FULL JOIN UserAccess ON Users.id = UserAccess.user_id 
+LEFT JOIN Calendars ON UserAccess.calendar_id = Calendars.id;
+
+**То же самое с "RIGHT JOIN".**
+
+SELECT Calendars.title, Users.name
+FROM Calendars
+RIGHT JOIN UserAccess ON Calendars.id = UserAccess.calendar_id
+RIGHT JOIN Users ON UserAccess.user_id = Users.id;
+
+**Все возможные пары пользователей и календарей, независимо от того, есть ли у пользователя доступ к календарю.**
+
+SELECT Users.name, Calendars.title 
+FROM Users 
+CROSS JOIN Calendars;
+
+**Действующие примеры с JOIN ... USING и NATURAL JOIN на этом наборе таблиц выполнить невозможно, так как отсутствуют столбцы с одинаковыми названиями, совпадающие по значению.**
 
