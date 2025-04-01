@@ -1,13 +1,19 @@
 import psycopg2
 import hashlib
-    
+import os
+from dotenv import load_dotenv
+
+load_dotenv()
+
 DB_CONFIG = {
-    "dbname": "itmo_labs",
-    "user": "postgres",
-    "password": "OuuOuuOiuyt",
-    "host": "localhost",
-    "port": "5432",
+    'dbname': os.environ.get('DB_NAME', ''),
+    'user': os.environ.get('DB_USER', ''),
+    'password': os.environ.get('DB_PASSWORD', ''),
+    'host': os.environ.get('DB_HOST', 'localhost'),
+    'port': os.environ.get('DB_PORT', '5432')
 }
+
+print('DB_CONFIG: \n', DB_CONFIG)
 
 def hash_password(password):
     # Создаем объект хеша
