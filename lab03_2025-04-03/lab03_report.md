@@ -164,5 +164,17 @@ SELECT Users.name, Calendars.title
 FROM Users 
 CROSS JOIN Calendars;
 
-**Действующие примеры с JOIN ... USING и NATURAL JOIN на этом наборе таблиц выполнить невозможно, так как отсутствуют столбцы с одинаковыми названиями, совпадающие по значению.**
+**Для того чтобы привести Действующие примеры с JOIN ... USING и NATURAL JOIN на этом наборе таблиц необходимо предварительно переименовать столбец 'user_id' в таблице UserAccess в столбец 'id'. Тогда названия столбцов в таблицах будут совпадать.**
+
+**Показать всех пользователей и их уровень доступа к календарям.**
+
+SELECT Users.name, UserAccess.access_level
+FROM Users
+JOIN UserAccess USING id;
+
+**Тот же результат с использованием NATURAL JOIN:**
+
+SELECT Users.name, UserAccess.access_level
+FROM Users
+NATURAL JOIN UserAccess;
 
