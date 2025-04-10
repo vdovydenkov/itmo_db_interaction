@@ -21,19 +21,18 @@
 **Ограничение количества календарей на пользователя**  
 - Пользователь может создать не более 256 собственных календарей. Нарушение этого правила должно вызывать ошибку.
 **Ограничение на события в одном календаре**  
-- События в одном календаре не могут пересекаться по времени. Если новое событие пересекается с уже существующим, оно не должно добавляться.
 - Событие не может начинаться в прошлом.
-- Если у события указана "периодичность", то также обязательно должны быть заполнены дата и время начала. В противном случае — ошибка при создании или обновлении записи.
+- Если у события указана "продолжительность", то также обязательно должно быть указано время начала. В противном случае — ошибка при создании или обновлении записи.
 **Изменение доступа к календарю**  
-- При изменении владельца (например, если текущий владелец удаляется), должен назначаться новый владелец.
-- - Если пользователь является владельцем хотя бы одного календаря, он не может быть удален до передачи прав или удаления календарей.
+- При изменении владельца (например, если текущий владелец удаляется), должен назначаться новый владелец на все "несвободные".
+- Если пользователь является владельцем хотя бы одного календаря, он не может быть удален до передачи прав или удаления календарей.
 **Удаление записей.**
 - При удалении календаря должны удаляться связанные записи в `UserAccess` и `Calendar_Event`.
 - При удалении события оно должно удаляться из всех связей с календарями.
 
 ### ТРИГГЕРЫ
 
-1. **Ограничение: не более 256 календарей на пользователя**
+**1. Ограничение: не более 256 календарей на пользователя.**
 
 CREATE FUNCTION check_calendar_limit()
 RETURNS TRIGGER AS $$
@@ -57,41 +56,12 @@ FOR EACH ROW
 WHEN (NEW.access_level = 3)
 EXECUTE FUNCTION check_calendar_limit();
 
-2. **Запрет пересекающихся событий в одном календаре**
-
-CREATE FUNCTION prevent_event_overlap() RETURNS TRIGGER AS $$
-BEGIN
-    IF EXISTS (
-        SELECT 1
-        FROM Calendar_Event ce1
-        JOIN Events e1 ON ce1.event_id = e1.id
-        WHERE ce1.calendar_id IN (
-            SELECT calendar_id FROM Calendar_Event WHERE event_id = NEW.id
-        )
-        AND e1.event_date = NEW.event_date
-        AND e1.id != NEW.id
-        AND (
-            tstzrange(e1.event_time, e1.event_time + COALESCE(e1.duration, INTERVAL '0')) &&
-            tstzrange(NEW.event_time, NEW.event_time + COALESCE(NEW.duration, INTERVAL '0'))
-        )
-    ) THEN
-        RAISE EXCEPTION 'Событие пересекается с другим в этом календаре.';
-    END IF;
-
-    RETURN NEW;
-END;
-$$ LANGUAGE plpgsql;
-
-CREATE TRIGGER trg_prevent_event_overlap
-BEFORE INSERT OR UPDATE ON Events
-FOR EACH ROW
-EXECUTE FUNCTION prevent_event_overlap();
-
 ---
 
-3. **Событие не может начинаться в прошлом**
+**2. Событие не может начинаться в прошлом.**
 
-CREATE FUNCTION prevent_past_event() RETURNS TRIGGER AS $$
+CREATE FUNCTION prevent_past_event()
+RETURNS TRIGGER AS $$
 BEGIN
     IF NEW.event_date < CURRENT_DATE OR
        (NEW.event_date = CURRENT_DATE AND NEW.event_time < CURRENT_TIME) THEN
@@ -108,15 +78,15 @@ EXECUTE FUNCTION prevent_past_event();
 
 ---
 
-4. **Если есть периодичность — дата и время обязательны**
+**3. Если есть продолжительность — время начала события обязательно.**
 
-CREATE FUNCTION validate_recurring_event() RETURNS TRIGGER AS $$
+CREATE FUNCTION validate_during_event()
+RETURNS TRIGGER AS $$
 BEGIN
-    IF NEW.recurrence IS NOT NULL THEN
-        IF NEW.event_date IS NULL OR NEW.event_time IS NULL THEN
-            RAISE EXCEPTION 'Для повторяющегося события необходимо указать дату и время начала.';
-        END IF;
+    IF NEW.duration IS NOT NULL AND NEW.event_time IS NULL THEN
+        RAISE EXCEPTION 'Для длящегося события необходимо указать время начала.';
     END IF;
+
     RETURN NEW;
 END;
 $$ LANGUAGE plpgsql;
@@ -124,34 +94,13 @@ $$ LANGUAGE plpgsql;
 CREATE TRIGGER trg_validate_recurring_event
 BEFORE INSERT OR UPDATE ON Events
 FOR EACH ROW
-EXECUTE FUNCTION validate_recurring_event();
-
----
-
-5. **Запрет удаления пользователя с правами владельца**
-
-CREATE FUNCTION prevent_owner_deletion() RETURNS TRIGGER AS $$
-BEGIN
-    IF EXISTS (
-        SELECT 1 FROM UserAccess
-        WHERE user_id = OLD.id AND access_level = 3
-    ) THEN
-        RAISE EXCEPTION 'Нельзя удалить пользователя, пока он владеет хотя бы одним календарем.';
-    END IF;
-    RETURN OLD;
-END;
-$$ LANGUAGE plpgsql;
-
-CREATE TRIGGER trg_prevent_owner_deletion
-BEFORE DELETE ON Users
-FOR EACH ROW
-EXECUTE FUNCTION prevent_owner_deletion();
+EXECUTE FUNCTION validate_during_event();
 
 ---
 
 ### Процедуры и функции
 
-1. **Удаление календаря и связанных записей**
+**1. Удаление календаря и связанных записей.**
 
 CREATE PROCEDURE delete_calendar_with_links(IN cal_id INTEGER)
 LANGUAGE plpgsql
@@ -165,7 +114,7 @@ $$;
 
 ---
 
-2. **Удаление события и связей**
+**2. Удаление события и связей.**
 
 CREATE PROCEDURE delete_event_with_links(IN ev_id INTEGER)
 LANGUAGE plpgsql
@@ -178,33 +127,41 @@ $$;
 
 ---
 
-3. **Назначение нового владельца при удалении текущего**
+**3. Принудительное переназначение владельцев календарей.**
 
-CREATE PROCEDURE transfer_calendar_ownership(IN old_owner_id INTEGER, IN target_calendar_id INTEGER)
+CREATE PROCEDURE transfer_calendars(IN owner_id INTEGER)
 LANGUAGE plpgsql
 AS $$
 DECLARE
+    target_calendar_id INTEGER;
     new_owner_id INTEGER;
 BEGIN
-    -- Поиск нового пользователя, у которого есть доступ, кроме текущего владельца
-    SELECT user_id INTO new_owner_id
-    FROM UserAccess
-    WHERE calendar_id = target_calendar_id AND user_id != old_owner_id
-    ORDER BY access_level DESC
-    LIMIT 1;
+    -- Цикл по всем календарям, где пользователь является владельцем
+    FOR target_calendar_id IN
+        SELECT DISTINCT calendar_id
+        FROM UserAccess
+        WHERE user_id = owner_id AND access_level = 3
+    LOOP
+        -- Поиск нового пользователя, у которого есть доступ, кроме текущего владельца
+        SELECT user_id INTO new_owner_id
+        FROM UserAccess
+        WHERE calendar_id = target_calendar_id
+            AND user_id != owner_id
+            AND access_level < 3
+        ORDER BY access_level DESC, user_id
+        LIMIT 1;
 
-    IF new_owner_id IS NULL THEN
-        RAISE EXCEPTION 'Невозможно назначить нового владельца — других пользователей нет.';
-    END IF;
+        IF new_owner_id IS NOT NULL THEN
+            -- Назначение нового владельца
+            UPDATE UserAccess
+            SET access_level = 3
+            WHERE user_id = new_owner_id AND calendar_id = target_calendar_id;
 
-    -- Назначение нового владельца
-    UPDATE UserAccess
-    SET access_level = 3
-    WHERE user_id = new_owner_id AND calendar_id = target_calendar_id;
-
-    -- Удаление старого владельца
-    DELETE FROM UserAccess
-    WHERE user_id = old_owner_id AND calendar_id = target_calendar_id;
+            -- Удаление связи со старым владельцем
+            DELETE FROM UserAccess
+            WHERE user_id = owner_id AND calendar_id = target_calendar_id;
+        END IF;
+    END LOOP;
 END;
 $$;
 
@@ -231,4 +188,54 @@ BEGIN
     END;
 END;
 $$;
+
+
+### Анализ использования базы данных
+
+**Нагруженность сущностей:**
+1. **Users** – при логине, регистрации, отображении профиля, проверке доступа.
+2. **Calendars** – при просмотре, создании, редактировании календарей.
+3. **Events** – основная сущность взаимодействия, особенно при отображении событий на определённую дату.
+4. **UserAccess** – при проверке прав доступа, отображении совместных календарей.
+5. **Calendar_Event** – при связке событий с календарями (чтение/удаление/поиск пересечений).
+
+**Основные типы запросов:**
+- **SELECT с фильтрацией по дате** (Events)
+- **JOIN для связи Events с Calendar_Event и Calendars**
+- **JOIN Users с UserAccess для проверки уровня доступа**
+
+У одного пользователя может быть несколько (или даже несколько десятков) календарей, а у каждого календаря несколько (или даже несколько десятков) событий. При этом "событие" — основная сущность, с которой чаще всего оперирует пользователь.
+Таким образом:
+1. **Events** — сущность с самым большим количеством записей из стержневых сущностей и с самым большим количеством операций.
+2. **Calendar_Event** — записей и операций не меньше, чем в сущности Events, поскольку каждое событие обязательно связано с календарем. И только операции обновления могут проводиться с сущностью Events, не касаясь Calendar_Event.
+3. **UserAccess** — третья по степени "нагруженности", поскольку задействуется каждый раз при проверке прав доступа пользователя к календарю.
+
+---
+
+### Обоснование индексов
+
+**1. Events (event_date)**
+
+CREATE INDEX idx_events_event_date ON Events(event_date);
+
+**Обоснование:** частые выборки событий на определённую дату (`WHERE event_date = ?`).
+
+**2. Calendar_Event (calendar_id)**
+
+CREATE INDEX idx_calendar_event_calendar_id ON Calendar_Event(calendar_id);
+
+**Обоснование:** часто используется в JOIN при выборке событий календаря.
+
+**3. Calendar_Event (event_id)**
+
+CREATE INDEX idx_calendar_event_event_id ON Calendar_Event(event_id);
+
+**Обоснование:** для быстрого удаления или получения календарей по событию.
+
+**4. UserAccess (user_id)**
+
+CREATE INDEX idx_user_access_user_id ON UserAccess(user_id);
+
+**Обоснование:** проверка доступа пользователя к календарям.
+
 
